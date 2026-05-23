@@ -1,0 +1,266 @@
+services:
+
+  # ================= RABBITMQ =================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - nexflow-network
+
+  # ================= POSTGRES CUSTOMER =================
+  postgres-customer:
+    image: postgres:15-alpine
+    container_name: postgres-customer
+    environment:
+      POSTGRES_DB: customer_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d customer_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nexflow-network
+
+  # ================= POSTGRES BOOKING =================
+  postgres-booking:
+    image: postgres:15-alpine
+    container_name: postgres-booking
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d booking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nexflow-network
+
+  # ================= POSTGRES NOTIFICATION =================
+  postgres-notification:
+    image: postgres:15-alpine
+    container_name: postgres-notification
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nexflow-network
+
+  # ================= POSTGRES PAYMENT =================
+  postgres-payment:
+    image: postgres:15-alpine
+    container_name: postgres-payment
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nexflow-network
+
+  # ================= MONGO RESOURCE =================
+  mongo-resource:
+    image: mongo:7
+    container_name: mongo-resource
+    environment:
+      MONGO_INITDB_DATABASE: resource_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - resource-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - nexflow-network
+
+  # ================= REDIS =================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - nexflow-network
+
+  # ================= CUSTOMER SERVICE =================
+  customer-service:
+    build: ./services/customer-service
+    container_name: customer-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DB_HOST: postgres-customer
+      DB_PORT: 5432
+      DB_NAME: customer_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      JWT_SECRET: nexflow_secret_key
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      NODE_ENV: development
+    depends_on:
+      postgres-customer:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexflow-network
+
+  # ================= BOOKING SERVICE =================
+  booking-service:
+    build: ./services/booking-service
+    container_name: booking-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DB_HOST: postgres-booking
+      DB_PORT: 5432
+      DB_NAME: booking_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      NODE_ENV: development
+    depends_on:
+      postgres-booking:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexflow-network
+
+  # ================= NOTIFICATION SERVICE =================
+  notification-service:
+    build: ./services/notification-service
+    container_name: notification-service
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      DB_HOST: postgres-notification
+      DB_PORT: 5432
+      DB_NAME: notification_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      NODE_ENV: development
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexflow-network
+
+  # ================= RESOURCE SERVICE =================
+  resource-service:
+    build: ./services/resource-service
+    container_name: resource-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      MONGO_URI: mongodb://mongo-resource:27017/resource_db
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      NODE_ENV: development
+    depends_on:
+      mongo-resource:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexflow-network
+
+  # ================= PAYMENT SERVICE =================
+  payment-service:
+    build:
+      context: ./services/payment-service
+    container_name: payment-service
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      DB_HOST: postgres-payment
+      DB_PORT: 5432
+      DB_NAME: payment_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      NODE_ENV: development
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexflow-network
+
+  # ================= API GATEWAY =================
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      JWT_SECRET: nexflow_secret_key
+      CUSTOMER_SERVICE_URL: http://customer-service:3001
+      RESOURCE_SERVICE_URL: http://resource-service:3002
+      BOOKING_SERVICE_URL: http://booking-service:3003
+      PAYMENT_SERVICE_URL: http://payment-service:3004
+      NOTIFICATION_SERVICE_URL: http://notification-service:3005
+      NODE_ENV: development
+    depends_on:
+      - customer-service
+      - resource-service
+      - booking-service
+      - payment-service
+      - notification-service
+    networks:
+      - nexflow-network
+
+# ================= VOLUMES =================
+volumes:
+  resource-data:
+
+# ================= NETWORK =================
+networks:
+  nexflow-network:
+    driver: bridge
