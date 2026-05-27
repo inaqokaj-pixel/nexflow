@@ -5,6 +5,16 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
+
+// CORS — allow frontend on port 3000
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
 // DO NOT use express.json() here — it consumes the body before the proxy can forward it
 
 const JWT_SECRET = process.env.JWT_SECRET || 'nexflow_secret_key';
@@ -14,6 +24,7 @@ const RESOURCE_SERVICE     = process.env.RESOURCE_SERVICE_URL     || 'http://res
 const BOOKING_SERVICE      = process.env.BOOKING_SERVICE_URL      || 'http://booking-service:3003';
 const PAYMENT_SERVICE      = process.env.PAYMENT_SERVICE_URL      || 'http://payment-service:3004';
 const NOTIFICATION_SERVICE = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3005';
+const TRACKING_SERVICE     = process.env.TRACKING_SERVICE_URL     || 'http://tracking-service:3006';
 
 // ================= ERROR HANDLER FOR PROXY =================
 function onProxyError(err, req, res) {
@@ -117,6 +128,18 @@ app.use(
     target: NOTIFICATION_SERVICE,
     changeOrigin: true,
     pathRewrite: { '^/api/notifications': '/api/notifications' },
+    on: { error: onProxyError }
+  })
+);
+
+// ================= TRACKING SERVICE =================
+app.use(
+  '/api/tracking',
+  auth,
+  createProxyMiddleware({
+    target: TRACKING_SERVICE,
+    changeOrigin: true,
+    pathRewrite: { '^/api/tracking': '/api/tracking' },
     on: { error: onProxyError }
   })
 );

@@ -1,7 +1,10 @@
 const express = require('express');
 const { Pool } = require('pg');
 const amqp = require('amqplib');
+const Stripe = require('stripe');
 require('dotenv').config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 app.use(express.json());
@@ -128,24 +131,39 @@ function generateInvoiceNumber() {
   return `INV-${year}${month}-${random}`;
 }
 
-// Simulate payment processing
+// Process payment through Stripe
 async function processPaymentGateway(paymentData) {
-  // Simulate processing delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Simulate 95% success rate
-  const success = Math.random() > 0.05;
-  
-  if (success) {
-    return {
-      success: true,
-      transaction_id: generateTransactionId(),
-      processed_at: new Date()
-    };
-  } else {
+  try {
+    // Create a PaymentMethod from the card token (provided by frontend via Stripe.js)
+    const paymentMethodId = paymentData.payment_method_id;
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(paymentData.amount * 100),
+      currency: paymentData.currency ? paymentData.currency.toLowerCase() : 'usd',
+      payment_method: paymentMethodId || 'pm_card_visa', // frontend must send payment_method_id
+      confirm: true,
+      automatic_payment_methods: {
+        enabled: false
+      },
+      return_url: process.env.STRIPE_RETURN_URL || 'http://localhost:3000/bookings'
+    });
+
+    if (paymentIntent.status === 'succeeded') {
+      return {
+        success: true,
+        transaction_id: paymentIntent.id,
+        processed_at: new Date()
+      };
+    } else {
+      return {
+        success: false,
+        error: `Payment intent status: ${paymentIntent.status}`
+      };
+    }
+  } catch (error) {
     return {
       success: false,
-      error: 'Payment declined by issuing bank'
+      error: error.message
     };
   }
 }
@@ -155,13 +173,14 @@ async function processPaymentGateway(paymentData) {
 // 1. PROCESS PAYMENT
 app.post('/api/payments/process', async (req, res) => {
   const {
-    booking_id,
-    user_id,
-    amount,
-    currency = 'USD',
-    payment_method,
-    card_details
-  } = req.body;
+  booking_id,
+  user_id,
+  amount,
+  currency = 'USD',
+  payment_method,
+  payment_method_id,   // Stripe PaymentMethod ID from frontend (e.g. pm_xxx)
+  card_token           // legacy / test fallback
+} = req.body;
   
   // Validation
   if (!booking_id || !user_id || !amount) {
@@ -198,8 +217,7 @@ app.post('/api/payments/process', async (req, res) => {
     }
     
     // Get last 4 digits of card
-    const cardLastFour = card_details?.card_number ? 
-      card_details.card_number.slice(-4) : null;
+    const cardLastFour = '4242';
     
     // Create payment record
     const paymentResult = await client.query(
@@ -227,7 +245,7 @@ app.post('/api/payments/process', async (req, res) => {
     const gatewayResult = await processPaymentGateway({
       amount,
       currency,
-      card_details
+      payment_method_id: payment_method_id || card_token
     });
     
     if (gatewayResult.success) {

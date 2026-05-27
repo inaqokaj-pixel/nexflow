@@ -7,6 +7,8 @@ const amqp = require('amqplib');
 const app = express();
 app.use(express.json());
 
+
+
 // ================= DATABASE =================
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -58,6 +60,28 @@ async function publishEvent(eventType, data) {
   );
 
   console.log(`📤 Event published: ${eventType}`);
+}
+
+function calculateShippingCost(cargo_details, pickup_location, delivery_location) {
+  const weight = parseFloat(cargo_details?.weight_kg || 1);
+
+  let cost = 25;
+
+  cost += weight * 4;
+
+  if (
+    pickup_location?.country &&
+    delivery_location?.country &&
+    pickup_location.country !== delivery_location.country
+  ) {
+    cost += 50;
+  }
+
+  if (weight > 20) {
+    cost += 40;
+  }
+
+  return Number(cost.toFixed(2));
 }
 
 // ================= DATABASE INIT =================
@@ -170,25 +194,32 @@ app.post('/api/bookings', async (req, res) => {
       });
     }
 
+    const totalCost = calculateShippingCost(
+  cargo_details,
+  pickup_location,
+  delivery_location
+    );
+
     const result = await pool.query(
       `INSERT INTO bookings (
         shipper_id, carrier_id, resource_id, route_id,
         pickup_location, delivery_location, cargo_details,
         pickup_date, estimated_delivery, status, total_cost
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',100)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10)
       RETURNING *`,
-      [
-        shipper_id,
-        carrier_id,
-        resource_id,
-        route_id,
-        JSON.stringify(pickup_location),
-        JSON.stringify(delivery_location),
-        JSON.stringify(cargo_details),
-        pickup_date,
-        estimated_delivery
-      ]
+          [
+      shipper_id,
+      carrier_id,
+      resource_id,
+      route_id,
+      JSON.stringify(pickup_location),
+      JSON.stringify(delivery_location),
+      JSON.stringify(cargo_details),
+      pickup_date,
+      estimated_delivery,
+      totalCost
+    ]
     );
 
     const booking = result.rows[0];
