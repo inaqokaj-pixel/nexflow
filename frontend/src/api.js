@@ -51,6 +51,12 @@ export const api = {
   getPayment: (bookingId) =>
     request('GET', `/api/payments/booking/${bookingId}`),
 
+  // Admin
+  adminGetUsers: () =>
+    request('GET', '/api/customers/admin/users'),
+  adminDeleteUser: (id) =>
+    request('DELETE', `/api/customers/admin/users/${id}`),
+
   // Notifications
   getNotifications: (userId) =>
     request('GET', `/api/notifications/user/${userId}`),

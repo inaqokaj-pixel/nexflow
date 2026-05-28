@@ -76,10 +76,17 @@ function Donut({ segments }) {
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, sub, color, sparkData }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', overflow: 'hidden' }}>
+    <div style={{
+      background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 16, padding: '20px 22px',
+      display: 'flex', flexDirection: 'column', gap: 6,
+      position: 'relative', overflow: 'hidden',
+      minWidth: 0,   /* ← prevents flex overflow */
+    }}>
       <div style={{ position: 'absolute', top: 0, right: 0, width: 80, height: 80, borderRadius: '0 16px 0 80px', background: `${color}18` }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>{icon}</div>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{icon}</div>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
       </div>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{value}</div>
@@ -91,22 +98,37 @@ function StatCard({ icon, label, value, sub, color, sparkData }) {
   );
 }
 
+// ── Sidebar width constant (single source of truth) ───────────────────────────
+const SIDEBAR_W = 240;
+
 // ── Admin Sidebar ─────────────────────────────────────────────────────────────
 function AdminSidebar({ active, setActive }) {
   const { user, logout } = useAuth();
   const nav = [
-    { key: 'dashboard', icon: '▣', label: 'Dashboard' },
-    { key: 'users', icon: '👥', label: 'Users' },
-    { key: 'bookings', icon: '📦', label: 'Bookings' },
-    { key: 'payments', icon: '💳', label: 'Payments' },
+    { key: 'dashboard',     icon: '▣',  label: 'Dashboard' },
+    { key: 'users',         icon: '👥', label: 'Users' },
+    { key: 'bookings',      icon: '📦', label: 'Bookings' },
+    { key: 'payments',      icon: '💳', label: 'Payments' },
     { key: 'notifications', icon: '🔔', label: 'Notifications' },
   ];
   return (
-    <div style={{ width: 220, background: 'linear-gradient(180deg,#2d1b69 0%,#1a1040 100%)', height: '100vh', position: 'fixed', top: 0, left: 0, display: 'flex', flexDirection: 'column', zIndex: 100, boxShadow: '4px 0 24px rgba(0,0,0,0.3)' }}>
+    <aside style={{
+      width: SIDEBAR_W,
+      flexShrink: 0,
+      background: 'linear-gradient(180deg,#2d1b69 0%,#1a1040 100%)',
+      height: '100vh',
+      position: 'sticky',   /* sticky instead of fixed → stays in flow */
+      top: 0,
+      alignSelf: 'flex-start',
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 100,
+      boxShadow: '4px 0 24px rgba(0,0,0,0.3)',
+    }}>
       {/* Logo */}
       <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg,#f472b6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff' }}>N</div>
+          <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg,#f472b6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff', flexShrink: 0 }}>N</div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 15, color: '#fff' }}>NexFlow</div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin Panel</div>
@@ -128,7 +150,7 @@ function AdminSidebar({ active, setActive }) {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '8px 12px' }}>
+      <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto' }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '8px 8px 6px' }}>Menu</div>
         {nav.map(item => (
           <button key={item.key} onClick={() => setActive(item.key)} style={{
@@ -139,7 +161,7 @@ function AdminSidebar({ active, setActive }) {
             borderLeft: active === item.key ? '3px solid #f472b6' : '3px solid transparent',
             fontSize: 13, fontWeight: active === item.key ? 700 : 400, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
           }}>
-            <span style={{ fontSize: 15, width: 20, textAlign: 'center' }}>{item.icon}</span>
+            <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
             {item.label}
           </button>
         ))}
@@ -153,7 +175,7 @@ function AdminSidebar({ active, setActive }) {
           <span>→</span> Sign Out
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
 
@@ -163,10 +185,12 @@ export default function AdminDashboard() {
   const [active, setActive] = useState('dashboard');
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   async function load() {
+    setLoadError('');
     try {
       const [uRes, bRes] = await Promise.all([
         api.adminGetUsers(),
@@ -174,9 +198,15 @@ export default function AdminDashboard() {
       ]);
       setUsers(uRes.users || []);
       setBookings(bRes.bookings || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      console.error(e);
+      setLoadError(e.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -188,26 +218,47 @@ export default function AdminDashboard() {
     finally { setDeletingId(null); }
   }
 
-  const shippers = users.filter(u => u.role === 'shipper').length;
-  const carriers = users.filter(u => u.role === 'carrier').length;
+  const shippers     = users.filter(u => u.role === 'shipper').length;
+  const carriers     = users.filter(u => u.role === 'carrier').length;
   const totalRevenue = bookings.reduce((s, b) => s + Number(b.total_cost || 0), 0);
-  const inTransit = bookings.filter(b => b.status === 'in_transit').length;
-  const delivered = bookings.filter(b => b.status === 'delivered').length;
+  const inTransit    = bookings.filter(b => b.status === 'in_transit').length;
+  const delivered    = bookings.filter(b => b.status === 'delivered').length;
 
-  const mockActivity = [[12,8],[18,14],[9,11],[24,16],[15,20],[28,18],[22,25],[16,19],[30,22],[24,28],[18,15],[26,20]];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mockActivity  = [[12,8],[18,14],[9,11],[24,16],[15,20],[28,18],[22,25],[16,19],[30,22],[24,28],[18,15],[26,20]];
+  const months        = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const statusColors  = { pending: '#f59e0b', confirmed: '#3b82f6', in_transit: '#a78bfa', delivered: '#34d399', cancelled: '#ef4444' };
 
-  const statusColors = { pending: '#f59e0b', confirmed: '#3b82f6', in_transit: '#a78bfa', delivered: '#34d399', cancelled: '#ef4444' };
-
-  const baseStyle = { marginLeft: 220, minHeight: '100vh', background: 'linear-gradient(135deg,#1a1040 0%,#0f0828 60%,#1a0a30 100%)', color: '#fff' };
-
+  /* ── outer shell: flex row, full viewport height ── */
   return (
-    <div style={{ display: 'flex' }}>
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg,#1a1040 0%,#0f0828 60%,#1a0a30 100%)',
+      color: '#fff',
+      overflow: 'hidden',   /* prevents horizontal scroll */
+    }}>
       <AdminSidebar active={active} setActive={setActive} />
-      <div style={baseStyle}>
+
+      {/* ── scrollable content column ── */}
+      <main style={{
+        flex: 1,
+        minWidth: 0,          /* flex child: allow shrink below natural width */
+        minHeight: '100vh',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <div className="spinner" style={{ width: 40, height: 40, borderTopColor: '#f472b6' }} />
+          </div>
+        ) : loadError ? (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '60vh', gap: 16 }}>
+            <div style={{ fontSize: 36 }}>⚠️</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#f87171' }}>Failed to load data</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', maxWidth: 360, textAlign: 'center' }}>{loadError}</div>
+            <button onClick={load} style={{ marginTop: 8, padding: '8px 24px', borderRadius: 8, background: 'rgba(244,114,182,0.2)', border: '1px solid rgba(244,114,182,0.4)', color: '#f472b6', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              Retry
+            </button>
           </div>
         ) : (
           <>
@@ -227,21 +278,21 @@ export default function AdminDashboard() {
 
                 {/* Stat cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 28 }}>
-                  <StatCard icon="👥" label="Total Users" value={users.length} sub={`+${shippers} shippers`} color="#f472b6" sparkData={[8,12,10,16,14,18,22,19,24,20,26,users.length]} />
-                  <StatCard icon="📦" label="Bookings" value={bookings.length} sub={`${inTransit} in transit`} color="#a78bfa" sparkData={[5,9,7,14,11,16,13,18,15,20,17,bookings.length]} />
-                  <StatCard icon="💰" label="Revenue" value={`$${totalRevenue.toFixed(0)}`} sub={`${delivered} delivered`} color="#34d399" sparkData={[200,400,300,600,500,700,800,650,900,750,1000,totalRevenue/10]} />
-                  <StatCard icon="🚚" label="Carriers" value={carriers} sub={`${carriers} active fleets`} color="#60a5fa" sparkData={[2,3,2,4,3,5,4,6,5,7,6,carriers]} />
+                  <StatCard icon="👥" label="Total Users"  value={users.length}               sub={`+${shippers} shippers`}       color="#f472b6" sparkData={[8,12,10,16,14,18,22,19,24,20,26,users.length]} />
+                  <StatCard icon="📦" label="Bookings"     value={bookings.length}             sub={`${inTransit} in transit`}     color="#a78bfa" sparkData={[5,9,7,14,11,16,13,18,15,20,17,bookings.length]} />
+                  <StatCard icon="💰" label="Revenue"      value={`$${totalRevenue.toFixed(0)}`} sub={`${delivered} delivered`}    color="#34d399" sparkData={[200,400,300,600,500,700,800,650,900,750,1000,totalRevenue/10]} />
+                  <StatCard icon="🚚" label="Carriers"     value={carriers}                    sub={`${carriers} active fleets`}   color="#60a5fa" sparkData={[2,3,2,4,3,5,4,6,5,7,6,carriers]} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, marginBottom: 20 }}>
                   {/* Activity chart */}
-                  <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '22px 24px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '22px 24px', minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                       <div>
                         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>Platform Activity</h3>
                         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Bookings vs Deliveries per month</p>
                       </div>
-                      <div style={{ display: 'flex', gap: 16 }}>
+                      <div style={{ display: 'flex', gap: 16, flexShrink: 0 }}>
                         {[['Bookings','#f472b6'],['Delivered','#a78bfa']].map(([l,c])=>(
                           <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
                             <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
@@ -268,7 +319,7 @@ export default function AdminDashboard() {
                           <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                             <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }} />
                             <span style={{ color: 'rgba(255,255,255,0.6)' }}>{l}</span>
-                            <span style={{ fontWeight: 700, color: '#fff', marginLeft: 'auto' }}>{bookings.filter(b=>b.status===s).length}</span>
+                            <span style={{ fontWeight: 700, color: '#fff', marginLeft: 'auto', paddingLeft: 8 }}>{bookings.filter(b=>b.status===s).length}</span>
                           </div>
                         ))}
                       </div>
@@ -282,30 +333,32 @@ export default function AdminDashboard() {
                     <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>Recent Bookings</h3>
                     <button onClick={() => setActive('bookings')} style={{ background: 'rgba(244,114,182,0.15)', border: '1px solid rgba(244,114,182,0.3)', borderRadius: 8, padding: '5px 14px', fontSize: 12, color: '#f472b6', fontWeight: 600, cursor: 'pointer' }}>View all</button>
                   </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                        {['Route','Shipper','Pickup Date','Cost','Status'].map(h => (
-                          <th key={h} style={{ padding: '10px 20px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bookings.slice(0,6).map(b => (
-                        <tr key={b.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                          <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 600 }}>{b.pickup_location?.city} → {b.delivery_location?.city}</td>
-                          <td style={{ padding: '13px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>{b.shipper_id?.slice(0,8)}...</td>
-                          <td style={{ padding: '13px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{b.pickup_date ? new Date(b.pickup_date).toLocaleDateString() : 'TBD'}</td>
-                          <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#34d399' }}>${b.total_cost}</td>
-                          <td style={{ padding: '13px 20px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${statusColors[b.status]}22`, color: statusColors[b.status], border: `1px solid ${statusColors[b.status]}44` }}>
-                              {b.status?.replace('_',' ')}
-                            </span>
-                          </td>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 540 }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                          {['Route','Shipper','Pickup Date','Cost','Status'].map(h => (
+                            <th key={h} style={{ padding: '10px 20px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {bookings.slice(0,6).map(b => (
+                          <tr key={b.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 600 }}>{b.pickup_location?.city} → {b.delivery_location?.city}</td>
+                            <td style={{ padding: '13px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>{b.shipper_id?.slice(0,8)}...</td>
+                            <td style={{ padding: '13px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{b.pickup_date ? new Date(b.pickup_date).toLocaleDateString() : 'TBD'}</td>
+                            <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#34d399' }}>${b.total_cost}</td>
+                            <td style={{ padding: '13px 20px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${statusColors[b.status]}22`, color: statusColors[b.status], border: `1px solid ${statusColors[b.status]}44`, whiteSpace: 'nowrap' }}>
+                                {b.status?.replace('_',' ')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -313,12 +366,12 @@ export default function AdminDashboard() {
             {/* ── USERS TAB ── */}
             {active === 'users' && (
               <div style={{ padding: '36px 36px', animation: 'fadeUp 0.35s ease' }}>
-                <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
                   <div>
                     <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 900 }}>User Management</h1>
                     <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 4 }}>{users.length} registered users</p>
                   </div>
-                  <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     {[['👥 All', users.length, '#fff'],['📦 Shippers', shippers, '#60a5fa'],['🚛 Carriers', carriers, '#34d399']].map(([l,v,c])=>(
                       <div key={l} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 18px', textAlign: 'center' }}>
                         <div style={{ fontSize: 20, fontWeight: 800, color: c }}>{v}</div>
@@ -328,53 +381,55 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
-                        {['User','Role','Joined','Actions'].map(h => (
-                          <th key={h} style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map(u => {
-                        const roleColor = { shipper: '#60a5fa', carrier: '#34d399', admin: '#f472b6' };
-                        return (
-                          <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                            <td style={{ padding: '14px 20px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${roleColor[u.role]}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: roleColor[u.role], flexShrink: 0 }}>
-                                  {u.email[0].toUpperCase()}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
+                          {['User','Role','Joined','Actions'].map(h => (
+                            <th key={h} style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map(u => {
+                          const roleColor = { shipper: '#60a5fa', carrier: '#34d399', admin: '#f472b6' };
+                          return (
+                            <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '14px 20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${roleColor[u.role]}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: roleColor[u.role], flexShrink: 0 }}>
+                                    {u.email[0].toUpperCase()}
+                                  </div>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>#{u.id.slice(0,8)}</div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div style={{ fontSize: 13, fontWeight: 600 }}>{u.email}</div>
-                                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>#{u.id.slice(0,8)}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: '14px 20px' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${roleColor[u.role]}20`, color: roleColor[u.role], border: `1px solid ${roleColor[u.role]}40`, textTransform: 'capitalize' }}>
-                                {u.role}
-                              </span>
-                            </td>
-                            <td style={{ padding: '14px 20px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                              {new Date(u.created_at).toLocaleDateString()}
-                            </td>
-                            <td style={{ padding: '14px 20px' }}>
-                              {u.role !== 'admin' && (
-                                <button onClick={() => handleDeleteUser(u.id)} disabled={deletingId === u.id}
-                                  style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '5px 14px', fontSize: 12, color: '#f87171', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.25)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; }}>
-                                  {deletingId === u.id ? '...' : 'Remove'}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              </td>
+                              <td style={{ padding: '14px 20px' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${roleColor[u.role]}20`, color: roleColor[u.role], border: `1px solid ${roleColor[u.role]}40`, textTransform: 'capitalize' }}>
+                                  {u.role}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 20px', fontSize: 12, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>
+                                {new Date(u.created_at).toLocaleDateString()}
+                              </td>
+                              <td style={{ padding: '14px 20px' }}>
+                                {u.role !== 'admin' && (
+                                  <button onClick={() => handleDeleteUser(u.id)} disabled={deletingId === u.id}
+                                    style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 7, padding: '5px 14px', fontSize: 12, color: '#f87171', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.25)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; }}>
+                                    {deletingId === u.id ? '...' : 'Remove'}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -387,31 +442,33 @@ export default function AdminDashboard() {
                   <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 4 }}>{bookings.length} total bookings · ${totalRevenue.toFixed(2)} revenue</p>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
-                        {['ID','Route','Cargo','Pickup','Cost','Status'].map(h => (
-                          <th key={h} style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bookings.map(b => (
-                        <tr key={b.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                          <td style={{ padding: '12px 20px', fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>#{b.id.slice(0,8)}</td>
-                          <td style={{ padding: '12px 20px', fontSize: 13, fontWeight: 600 }}>{b.pickup_location?.city} → {b.delivery_location?.city}</td>
-                          <td style={{ padding: '12px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{b.cargo_details?.weight_kg}kg</td>
-                          <td style={{ padding: '12px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{b.pickup_date ? new Date(b.pickup_date).toLocaleDateString() : 'TBD'}</td>
-                          <td style={{ padding: '12px 20px', fontSize: 13, fontWeight: 700, color: '#34d399' }}>${b.total_cost}</td>
-                          <td style={{ padding: '12px 20px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${statusColors[b.status]}22`, color: statusColors[b.status], border: `1px solid ${statusColors[b.status]}44` }}>
-                              {b.status?.replace('_', ' ')}
-                            </span>
-                          </td>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
+                          {['ID','Route','Cargo','Pickup','Cost','Status'].map(h => (
+                            <th key={h} style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {bookings.map(b => (
+                          <tr key={b.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '12px 20px', fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>#{b.id.slice(0,8)}</td>
+                            <td style={{ padding: '12px 20px', fontSize: 13, fontWeight: 600 }}>{b.pickup_location?.city} → {b.delivery_location?.city}</td>
+                            <td style={{ padding: '12px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{b.cargo_details?.weight_kg}kg</td>
+                            <td style={{ padding: '12px 20px', fontSize: 12, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>{b.pickup_date ? new Date(b.pickup_date).toLocaleDateString() : 'TBD'}</td>
+                            <td style={{ padding: '12px 20px', fontSize: 13, fontWeight: 700, color: '#34d399' }}>${b.total_cost}</td>
+                            <td style={{ padding: '12px 20px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${statusColors[b.status]}22`, color: statusColors[b.status], border: `1px solid ${statusColors[b.status]}44`, whiteSpace: 'nowrap' }}>
+                                {b.status?.replace('_', ' ')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -423,11 +480,11 @@ export default function AdminDashboard() {
                   <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 900 }}>Payment Overview</h1>
                   <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 4 }}>Total platform revenue</p>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 28 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
                   {[
-                    { icon: '💰', label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, color: '#34d399' },
-                    { icon: '📦', label: 'Paid Bookings', value: bookings.filter(b => b.status !== 'cancelled').length, color: '#a78bfa' },
-                    { icon: '📊', label: 'Avg per Booking', value: bookings.length ? `$${(totalRevenue / bookings.length).toFixed(2)}` : '$0', color: '#f472b6' },
+                    { icon: '💰', label: 'Total Revenue',     value: `$${totalRevenue.toFixed(2)}`,                                                                              color: '#34d399' },
+                    { icon: '📦', label: 'Paid Bookings',     value: bookings.filter(b => b.status !== 'cancelled').length,                                                       color: '#a78bfa' },
+                    { icon: '📊', label: 'Avg per Booking',   value: bookings.length ? `$${(totalRevenue / bookings.length).toFixed(2)}` : '$0',                                  color: '#f472b6' },
                   ].map(s => (
                     <div key={s.label} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '24px' }}>
                       <div style={{ fontSize: 28, marginBottom: 10 }}>{s.icon}</div>
@@ -448,11 +505,11 @@ export default function AdminDashboard() {
                   {bookings.slice(0, 10).map(b => (
                     <div key={b.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
                       <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>📦</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>Booking {b.status?.replace('_', ' ')}: {b.pickup_location?.city} → {b.delivery_location?.city}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Booking {b.status?.replace('_', ' ')}: {b.pickup_location?.city} → {b.delivery_location?.city}</div>
                         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{new Date(b.created_at).toLocaleString()} · ${b.total_cost}</div>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: `${statusColors[b.status]}22`, color: statusColors[b.status] }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: `${statusColors[b.status]}22`, color: statusColors[b.status], whiteSpace: 'nowrap', flexShrink: 0 }}>
                         {b.status?.replace('_', ' ')}
                       </span>
                     </div>
@@ -462,7 +519,7 @@ export default function AdminDashboard() {
             )}
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }

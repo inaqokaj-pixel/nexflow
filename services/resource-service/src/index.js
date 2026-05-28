@@ -28,7 +28,7 @@ const fleetSchema = new mongoose.Schema({
   vehicle_type: { 
     type: String, 
     required: true,
-    enum: ['truck', 'container', 'cargo_plane', 'van', 'semi_truck']
+    enum: ['truck', 'van', 'semi_truck', 'container', 'cargo_plane', 'motorcycle', 'ship', 'train']
   },
   capacity: {
     weight_kg: { type: Number, required: true, min: 0 },

@@ -171,6 +171,29 @@ app.delete('/customers/admin/users/:id', async (req, res) => {
   }
 });
 
+// ── ADMIN: STATS ──────────────────────────────────────────────────────────────
+app.get('/customers/admin/stats', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    const totals = await pool.query(`
+      SELECT
+        COUNT(*)                                                          AS total_users,
+        COUNT(*) FILTER (WHERE role = 'shipper')                         AS total_shippers,
+        COUNT(*) FILTER (WHERE role = 'carrier')                         AS total_carriers,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS new_this_week
+      FROM users
+    `);
+
+    res.json({ stats: totals.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── HEALTH ────────────────────────────────────────────────────────────────────
 app.get('/health', async (req, res) => {
   try {

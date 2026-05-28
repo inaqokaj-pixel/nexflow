@@ -72,6 +72,18 @@ function auth(req, res, next) {
   }
 }
 
+// ================= ADMIN STATS =================
+app.use(
+  '/api/customers/admin/stats',
+  auth,
+  createProxyMiddleware({
+    target: CUSTOMER_SERVICE,
+    changeOrigin: true,
+    pathRewrite: { '^/api/customers/admin/stats': '/customers/admin/stats' },
+    on: { error: onProxyError }
+  })
+);
+
 // ================= CUSTOMER (protected) =================
 app.use(
   '/api/customers',
