@@ -5,7 +5,6 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-
 // CORS — allow frontend on port 3000
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -55,6 +54,17 @@ app.use(
     target: CUSTOMER_SERVICE,
     changeOrigin: true,
     pathRewrite: { '^/api/customers/login': '/customers/login' },
+    on: { error: onProxyError }
+  })
+);
+
+// ================= PUBLIC: GOOGLE AUTH =================
+app.use(
+  '/api/customers/auth/google',
+  createProxyMiddleware({
+    target: CUSTOMER_SERVICE,
+    changeOrigin: true,
+    pathRewrite: { '^/api/customers/auth/google': '/customers/auth/google' },
     on: { error: onProxyError }
   })
 );

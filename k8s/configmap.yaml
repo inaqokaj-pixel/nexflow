@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexflow-config
+  namespace: nexflow
+data:
+  NODE_ENV: "production"
+  RABBITMQ_URL: "amqp://admin:admin123@rabbitmq:5672"
+  # Service URLs (internal cluster DNS)
+  CUSTOMER_SERVICE_URL: "http://customer-service:3001"
+  RESOURCE_SERVICE_URL: "http://resource-service:3002"
+  BOOKING_SERVICE_URL: "http://booking-service:3003"
+  PAYMENT_SERVICE_URL: "http://payment-service:3004"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3005"
+  TRACKING_SERVICE_URL: "http://tracking-service:3006"

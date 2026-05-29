@@ -3,6 +3,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const amqp = require('amqplib');
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,48 @@ const pool = new Pool({
 const JWT_SECRET = process.env.JWT_SECRET || 'nexflow_secret_key';
 const PORT = process.env.PORT || 3001;
 
+// ── RABBITMQ ──────────────────────────────────────────────────────────────────
+let mqChannel = null;
+
+async function connectRabbitMQ() {
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    try {
+      const connection = await amqp.connect(
+        process.env.RABBITMQ_URL || 'amqp://admin:admin123@rabbitmq:5672'
+      );
+      mqChannel = await connection.createChannel();
+      await mqChannel.assertExchange('nexflow_events', 'topic', { durable: true });
+      console.log('✅ Connected to RabbitMQ');
+
+      connection.on('close', () => {
+        console.warn('⚠️ RabbitMQ connection closed, reconnecting...');
+        mqChannel = null;
+        setTimeout(connectRabbitMQ, 5000);
+      });
+      return;
+    } catch (err) {
+      console.error(`❌ RabbitMQ not ready (attempt ${attempt}/10): ${err.message}`);
+      await delay(3000);
+    }
+  }
+  console.warn('⚠️ Could not connect to RabbitMQ – welcome emails will be skipped');
+}
+
+async function publishEvent(routingKey, data) {
+  if (!mqChannel) return;
+  try {
+    mqChannel.publish(
+      'nexflow_events',
+      routingKey,
+      Buffer.from(JSON.stringify({ event_type: routingKey, data })),
+      { persistent: true }
+    );
+  } catch (err) {
+    console.error(`❌ Failed to publish ${routingKey}:`, err.message);
+  }
+}
+
 // ── DB INIT ──────────────────────────────────────────────────────────────────
 async function initDB() {
   const delay = ms => new Promise(r => setTimeout(r, ms));
@@ -27,8 +70,11 @@ async function initDB() {
         CREATE TABLE IF NOT EXISTS users (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           email TEXT UNIQUE NOT NULL,
-          password_hash TEXT NOT NULL,
+          password_hash TEXT,
           role TEXT NOT NULL CHECK (role IN ('shipper','carrier','admin')),
+          google_id TEXT UNIQUE,
+          name TEXT,
+          avatar TEXT,
           created_at TIMESTAMP DEFAULT NOW()
         );
         CREATE TABLE IF NOT EXISTS profiles (
@@ -38,6 +84,24 @@ async function initDB() {
           contact_phone TEXT,
           address TEXT
         );
+
+        -- Migrations: make password_hash nullable and add Google columns
+        -- These are safe to run repeatedly (ALTER COLUMN … DROP NOT NULL is idempotent via DO block)
+        DO $$
+        BEGIN
+          ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+        EXCEPTION WHEN others THEN NULL;
+        END $$;
+
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+
+        DO $$
+        BEGIN
+          ALTER TABLE users ADD CONSTRAINT users_google_id_unique UNIQUE (google_id);
+        EXCEPTION WHEN duplicate_table THEN NULL;
+        END $$;
       `);
       console.log('✅ Customer DB ready');
       return;
@@ -96,9 +160,120 @@ app.post('/customers/register', async (req, res) => {
       `INSERT INTO users(email, password_hash, role) VALUES($1,$2,$3) RETURNING id,email,role`,
       [email.toLowerCase(), hash, role]
     );
-    res.status(201).json(result.rows[0]);
+    const newUser = result.rows[0];
+
+    // Publish welcome event to notification service
+    await publishEvent('user.registered', {
+      user_id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    });
+
+    res.status(201).json(newUser);
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+// ── GOOGLE AUTH ───────────────────────────────────────────────────────────────
+// POST /customers/auth/google
+// Body: { credential: "<Google access token>", role: "shipper"|"carrier" }
+//
+// Flow:
+//   1. Exchange the Google access token for user info via Google's userinfo endpoint.
+//   2. If the user already exists (matched by google_id or email) → sign them in.
+//   3. If not → create a new account with the role supplied by the client,
+//      then fire a user.registered welcome event.
+app.post('/customers/auth/google', async (req, res) => {
+  const { credential, role } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential is required' });
+  }
+
+  // Verify the access token by calling Google's userinfo endpoint (built-in https)
+  let googleUser;
+  try {
+    googleUser = await new Promise((resolve, reject) => {
+      const https = require('https');
+      const req = https.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        { headers: { Authorization: `Bearer ${credential}` } },
+        (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            if (res.statusCode !== 200) {
+              reject(new Error(`Google userinfo returned ${res.statusCode}`));
+            } else {
+              try { resolve(JSON.parse(data)); }
+              catch (e) { reject(new Error('Invalid JSON from Google')); }
+            }
+          });
+        }
+      );
+      req.on('error', reject);
+      req.end();
+    });
+  } catch (err) {
+    console.error('Google token verification failed:', err.message);
+    return res.status(401).json({ error: 'Invalid Google token' });
+  }
+
+  const { sub: googleId, email, name, picture: avatar } = googleUser;
+
+  try {
+    // Check if user exists by google_id or email
+    let result = await pool.query(
+      'SELECT id, email, role, name, avatar FROM users WHERE google_id=$1 OR email=$2',
+      [googleId, email.toLowerCase()]
+    );
+
+    let user;
+    let isNewUser = false;
+
+    if (result.rows.length > 0) {
+      user = result.rows[0];
+      // Update google_id / avatar if this is the first Google sign-in for an existing email account
+      await pool.query(
+        'UPDATE users SET google_id=$1, avatar=$2, name=COALESCE(name,$3) WHERE id=$4',
+        [googleId, avatar, name, user.id]
+      );
+    } else {
+      // New user — require a role from the client (sent from the sign-up form)
+      const assignedRole = ['shipper', 'carrier'].includes(role) ? role : 'shipper';
+      const insertResult = await pool.query(
+        `INSERT INTO users(email, google_id, role, name, avatar)
+         VALUES($1,$2,$3,$4,$5)
+         RETURNING id, email, role, name, avatar`,
+        [email.toLowerCase(), googleId, assignedRole, name, avatar]
+      );
+      user = insertResult.rows[0];
+      isNewUser = true;
+
+      // Send welcome notification for new Google sign-ups
+      await publishEvent('user.registered', {
+        user_id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, role: user.role, name: user.name, avatar: user.avatar },
+      isNewUser,
+    });
+  } catch (err) {
+    console.error('Google auth DB error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -112,6 +287,12 @@ app.post('/customers/login', async (req, res) => {
     if (result.rows.length === 0)
       return res.status(401).json({ error: 'Invalid credentials' });
     const user = result.rows[0];
+
+    // Google-only accounts have no password_hash
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'This account uses Google Sign-In. Please use the Google button.' });
+    }
+
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign(
@@ -132,7 +313,7 @@ app.get('/customers/profile', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'No token' });
     const decoded = jwt.verify(token, JWT_SECRET);
     const result = await pool.query(
-      'SELECT id, email, role, created_at FROM users WHERE id=$1',
+      'SELECT id, email, role, name, avatar, created_at FROM users WHERE id=$1',
       [decoded.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -208,6 +389,7 @@ async function start() {
   await initDB();
   await seedAdmin();
   await seedSimulatorUser();
+  await connectRabbitMQ();
   app.listen(PORT, () => console.log(`🚀 Customer Service running on port ${PORT}`));
 }
 

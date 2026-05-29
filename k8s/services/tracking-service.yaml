@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracking-service
+  namespace: nexflow
+  labels:
+    app: tracking-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tracking-service
+  template:
+    metadata:
+      labels:
+        app: tracking-service
+    spec:
+      containers:
+        - name: tracking-service
+          image: nexflow/tracking-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3006
+          env:
+            - name: PORT
+              value: "3006"
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: nexflow-config
+                  key: NODE_ENV
+            - name: DB_HOST
+              value: "postgres-tracking"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "tracking_db"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nexflow-secrets
+                  key: postgres-password
+            - name: RABBITMQ_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: nexflow-config
+                  key: RABBITMQ_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3006
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 8
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3006
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracking-service
+  namespace: nexflow
+spec:
+  selector:
+    app: tracking-service
+  ports:
+    - port: 3006
+      targetPort: 3006

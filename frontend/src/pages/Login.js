@@ -1,544 +1,764 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
 
-/* ─── Warehouse illustration (App tab) ──────────────────────────────────── */
-function WarehouseIllustration() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-      <svg viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg"
-        style={{ position: 'absolute', bottom: 0, right: 0, width: '62%', height: '90%' }}>
-        <ellipse cx="900" cy="870" rx="580" ry="90" fill="#009e76" opacity="0.4" />
-        <rect x="400" y="110" width="800" height="700" rx="6" fill="#0d5c45" />
-        <rect x="400" y="110" width="800" height="38" fill="#0a4a37" />
-        {Array.from({ length: 14 }, (_, i) => (
-          <circle key={i} cx={428 + i * 56} cy={129} r={10} fill="none" stroke="#0a4a37" strokeWidth="2.5" />
-        ))}
-        {[415, 555, 695, 835, 975].map((x, i) => (
-          <g key={i}>
-            <rect x={x} y={170} width={115} height={95} rx="4" fill="#f59e0b" />
-            {i === 0 && <ellipse cx={x + 57} cy={192} rx={23} ry={30} fill="#00c896" />}
-            {i === 1 && <rect x={x + 24} y={174} width={67} height={44} rx="3" fill="#a78bfa" />}
-            {i === 2 && <circle cx={x + 57} cy={216} r={22} fill="#00c896" stroke="#0d5c45" strokeWidth="3" />}
-            {i === 3 && <rect x={x + 16} y={178} width={82} height={36} rx="3" fill="#f97316" />}
-            {i === 4 && (
-              <text x={x + 57} y={228} textAnchor="middle" fontSize="12" fontWeight="800" fill="#0d5c45" fontFamily="sans-serif">
-                NX
-              </text>
-            )}
-          </g>
-        ))}
-        <rect x="560" y="490" width="165" height="225" rx="6" fill="#f59e0b" />
-        <circle cx="642" cy="612" r="22" fill="#00c896" stroke="#0d5c45" strokeWidth="3" />
-        <circle cx="642" cy="612" r="9" fill="#0d5c45" />
-        <rect x="770" y="440" width="245" height="275" rx="4" fill="#f59e0b" />
-        <text x="892" y="496" textAnchor="middle" fontSize="18" fontWeight="800" fill="#0d5c45" fontFamily="sans-serif">
-          nexflow
-        </text>
-        {[{ x: 784, y: 510, w: 66, h: 50 }, { x: 858, y: 510, w: 54, h: 50 }, { x: 920, y: 510, w: 86, h: 50 },
-          { x: 784, y: 566, w: 82, h: 50 }, { x: 874, y: 566, w: 128, h: 50 },
-          { x: 784, y: 622, w: 112, h: 80 }, { x: 904, y: 622, w: 96, h: 80 }].map((b, i) => (
-          <g key={i}>
-            <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="3" fill="#d97706" />
-            <rect x={b.x + b.w / 2 - 9} y={b.y} width={18} height={b.h} fill="rgba(0,0,0,0.1)" />
-            <rect x={b.x} y={b.y + b.h / 2 - 3} width={b.w} height={6} fill="rgba(0,0,0,0.07)" />
-          </g>
-        ))}
-        <circle cx="756" cy="458" r="27" fill="#7c3aed" opacity="0.9" />
-        <circle cx="756" cy="458" r="14" fill="#a78bfa" />
-        <g style={{ animation: 'float 3.5s ease-in-out infinite' }}>
-          <rect x="415" y="665" width="210" height="94" rx="8" fill="#0a4a37" />
-          <rect x="585" y="640" width="105" height="76" rx="6" fill="#0d5c45" />
-          <rect x="600" y="652" width="74" height="42" rx="3" fill="#00c896" opacity="0.45" />
-          <circle cx="462" cy="762" r="23" fill="#053d2c" /><circle cx="462" cy="762" r="11" fill="#0a4a37" />
-          <circle cx="600" cy="762" r="23" fill="#053d2c" /><circle cx="600" cy="762" r="11" fill="#0a4a37" />
-        </g>
-        <g style={{ animation: 'float 2.8s 0.4s ease-in-out infinite' }}>
-          <rect x="665" y="378" width="154" height="34" rx="17" fill="#00c896" />
-          <text x="742" y="400" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            select_carrier
-          </text>
-        </g>
-        <g style={{ animation: 'float 2.2s 1.1s ease-in-out infinite' }}>
-          <rect x="1010" y="706" width="136" height="34" rx="17" fill="#00c896" />
-          <text x="1078" y="728" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            print_label
-          </text>
-        </g>
-        <g style={{ animation: 'float 3s 0.7s ease-in-out infinite' }}>
-          <rect x="415" y="384" width="124" height="34" rx="17" fill="#f59e0b" />
-          <text x="477" y="406" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            book_now
-          </text>
-        </g>
-      </svg>
-      <svg viewBox="0 0 1400 180" xmlns="http://www.w3.org/2000/svg"
-        style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '140px' }}>
-        <ellipse cx="190" cy="170" rx="360" ry="110" fill="#009e76" opacity="0.3" />
-        <ellipse cx="1280" cy="175" rx="300" ry="95" fill="#009e76" opacity="0.22" />
-      </svg>
-    </div>
-  );
+// Set your Google OAuth Client ID here or via REACT_APP_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+
+/* ─── Animations & global styles ─────────────────────────────── */
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @keyframes nf-spin   { to { transform: rotate(360deg); } }
+  @keyframes nf-rise   { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes nf-drift1 { 0%,100%{transform:translateX(0) translateY(0)} 33%{transform:translateX(18px) translateY(-8px)} 66%{transform:translateX(-10px) translateY(6px)} }
+  @keyframes nf-drift2 { 0%,100%{transform:translateX(0) translateY(0)} 40%{transform:translateX(-14px) translateY(10px)} 80%{transform:translateX(10px) translateY(-6px)} }
+  @keyframes nf-plane  { 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-14px) rotate(1.5deg)} }
+  @keyframes nf-pulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+  @keyframes nf-trail  { from{stroke-dashoffset:900} to{stroke-dashoffset:0} }
+  @keyframes nf-pop    { 0%{transform:scale(0.85);opacity:0} 60%{transform:scale(1.04)} 100%{transform:scale(1);opacity:1} }
+  @keyframes nf-tab    { from{width:0;opacity:0} to{width:100%;opacity:1} }
+  @keyframes nf-err    { 0%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} 100%{transform:translateX(0)} }
+  @keyframes nf-shine  { from{left:-100%} to{left:200%} }
+
+  .nf-page {
+    min-height: 100vh;
+    display: flex;
+    font-family: 'DM Sans', sans-serif;
+    background: #060f0a;
+    overflow: hidden;
+  }
+
+  /* ─ Left panel ─ */
+  .nf-panel-left {
+    flex: 0 0 46%;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 36px 42px;
+    background: linear-gradient(160deg, #041a0e 0%, #062d18 38%, #0a5c35 80%, #0d8050 100%);
+  }
+
+  .nf-grid-svg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: .045; pointer-events: none;
+  }
+
+  .nf-orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(64px); pointer-events: none;
+  }
+
+  .nf-plane-wrap {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-55%, -52%);
+    width: 72%;
+    max-width: 380px;
+    animation: nf-plane 6s ease-in-out infinite;
+    filter: drop-shadow(0 32px 60px rgba(0,0,0,0.5));
+  }
+
+  .nf-badge-pin {
+    position: absolute;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .nf-badge-pin-label {
+    padding: 4px 11px; border-radius: 20px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .08em;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 3px 14px currentColor;
+  }
+  .nf-badge-pin-stem { width: 2px; height: 14px; border-radius: 1px; opacity: .5; }
+  .nf-badge-pin-dot  { width: 7px; height: 7px; border-radius: 50%; opacity: .3; }
+
+  .nf-panel-left-logo {
+    display: flex; align-items: center; gap: 10px;
+    position: relative; z-index: 2;
+    animation: nf-rise .6s ease both;
+  }
+  .nf-logo-mark {
+    width: 40px; height: 40px; border-radius: 11px;
+    background: linear-gradient(135deg, #00c896, #007a50);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 18px rgba(0,200,150,.4);
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px; color: #fff;
+    font-style: italic;
+  }
+  .nf-logo-name {
+    font-size: 17px; font-weight: 700; color: #fff;
+    letter-spacing: .02em;
+  }
+
+  .nf-panel-left-footer {
+    position: relative; z-index: 2;
+    animation: nf-rise .8s .2s ease both;
+    text-align: center;
+  }
+  .nf-left-headline {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px; color: #fff; line-height: 1.18;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 24px rgba(0,0,0,.35);
+  }
+  .nf-left-sub {
+    font-size: 13px; color: rgba(255,255,255,.52);
+    line-height: 1.7;
+  }
+  .nf-dots {
+    display: flex; justify-content: center; gap: 6px; margin-top: 18px;
+  }
+  .nf-dot { height: 6px; border-radius: 3px; }
+
+  /* ─ Right panel ─ */
+  .nf-panel-right {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 28px;
+    background: #fafaf9;
+    position: relative;
+    overflow-y: auto;
+  }
+  .nf-panel-right-bg {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(0,0,0,.04) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none;
+    opacity: .7;
+  }
+  .nf-form-wrap {
+    width: 100%; max-width: 400px;
+    position: relative; z-index: 1;
+    animation: nf-rise .5s ease both;
+  }
+
+  /* ─ Tabs ─ */
+  .nf-tabs {
+    display: flex;
+    background: #efefed;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 30px;
+    gap: 2px;
+  }
+  .nf-tab {
+    flex: 1; padding: 10px 0;
+    border: none; background: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: #8a9289; border-radius: 9px;
+    cursor: pointer; transition: all .2s ease;
+    position: relative; overflow: hidden;
+  }
+  .nf-tab.active {
+    background: #fff;
+    color: #0a1f12;
+    box-shadow: 0 2px 10px rgba(0,0,0,.09);
+  }
+  .nf-tab.active::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,200,150,.06) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* ─ Heading ─ */
+  .nf-heading {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px; color: #0a1f12;
+    line-height: 1.1; margin-bottom: 6px;
+    letter-spacing: -.01em;
+  }
+  .nf-heading em { color: #00a87e; font-style: italic; }
+  .nf-subhead {
+    font-size: 13.5px; color: #728470; margin-bottom: 28px; line-height: 1.6;
+  }
+
+  /* ─ Fields ─ */
+  .nf-field { margin-bottom: 14px; }
+  .nf-label {
+    display: block; font-size: 11.5px; font-weight: 700;
+    color: #4a6657; margin-bottom: 5px; letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .nf-input {
+    width: 100%; padding: 13px 16px;
+    background: #fff; border: 1.5px solid #dce8e1;
+    border-radius: 11px; font-size: 14px; color: #0a1f12;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .nf-input::placeholder { color: #b0c4b9; }
+  .nf-input:focus {
+    outline: none; border-color: #00c896; background: #fdfffe;
+    box-shadow: 0 0 0 4px rgba(0,200,150,.1);
+  }
+  .nf-input.has-icon { padding-right: 46px; }
+  .nf-input-wrap { position: relative; }
+  .nf-input-icon-btn {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; padding: 4px; cursor: pointer;
+    display: flex; align-items: center; color: #b0c4b9;
+    transition: color .15s;
+  }
+  .nf-input-icon-btn:hover { color: #4a6657; }
+
+  /* ─ Role cards ─ */
+  .nf-roles { display: flex; gap: 10px; margin-bottom: 16px; }
+  .nf-role-card {
+    flex: 1; padding: 13px 10px; border: 2px solid #dce8e1;
+    border-radius: 11px; cursor: pointer; transition: all .2s;
+    background: #fff; text-align: center; user-select: none;
+  }
+  .nf-role-card:hover { border-color: #a8d8c4; }
+  .nf-role-card.active {
+    border-color: #00c896; background: rgba(0,200,150,.06);
+    box-shadow: 0 0 0 3px rgba(0,200,150,.12);
+  }
+  .nf-role-icon { font-size: 22px; margin-bottom: 5px; }
+  .nf-role-name { font-size: 12.5px; font-weight: 700; color: #0a1f12; }
+  .nf-role-desc { font-size: 11px; color: #96b0a4; margin-top: 2px; }
+
+  /* ─ Password strength ─ */
+  .nf-strength { margin-top: 7px; }
+  .nf-strength-bars { display: flex; gap: 4px; margin-bottom: 4px; }
+  .nf-strength-bar { flex: 1; height: 3px; border-radius: 2px; transition: background .3s; }
+  .nf-strength-label { font-size: 11px; font-weight: 600; }
+
+  /* ─ Alert ─ */
+  .nf-alert {
+    padding: 11px 14px; border-radius: 10px; font-size: 13px;
+    display: flex; align-items: flex-start; gap: 9px;
+    margin-bottom: 14px; line-height: 1.5;
+  }
+  .nf-alert.error {
+    background: #fff5f5; border: 1.5px solid #fcc; color: #b91c1c;
+    animation: nf-err .35s ease;
+  }
+  .nf-alert.success {
+    background: #f0fdf8; border: 1.5px solid #a7f0ce; color: #166534;
+  }
+
+  /* ─ Primary button ─ */
+  .nf-btn {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, #00c896 0%, #009e78 100%);
+    color: #fff; border: none; border-radius: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    transition: transform .15s, box-shadow .15s, opacity .15s;
+    box-shadow: 0 4px 20px rgba(0,200,150,.35);
+    position: relative; overflow: hidden;
+    letter-spacing: .01em;
+  }
+  .nf-btn::after {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+    transform: skewX(-20deg);
+  }
+  .nf-btn:hover:not(:disabled)::after { animation: nf-shine .55s ease; }
+  .nf-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,200,150,.42); }
+  .nf-btn:active:not(:disabled) { transform: translateY(0); }
+  .nf-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  /* ─ Google button ─ */
+  .nf-google-btn {
+    width: 100%; padding: 13px;
+    background: #fff; border: 1.5px solid #dce8e1; border-radius: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; color: #0a1f12; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .nf-google-btn:hover {
+    border-color: #00c896; box-shadow: 0 0 0 3px rgba(0,200,150,.1);
+    transform: translateY(-1px);
+  }
+
+  /* ─ Divider ─ */
+  .nf-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 18px 0; color: #b0c4b9; font-size: 12px; font-weight: 500;
+  }
+  .nf-divider::before, .nf-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e4eee8;
+  }
+
+  /* ─ Footer text ─ */
+  .nf-footer-text {
+    text-align: center; margin-top: 22px;
+    font-size: 13px; color: #7a9d8a;
+  }
+  .nf-link {
+    background: none; border: none; padding: 0;
+    font-family: 'DM Sans', sans-serif; font-size: inherit;
+    color: #009e78; font-weight: 700; cursor: pointer;
+    text-decoration: underline; text-decoration-color: transparent;
+    transition: text-decoration-color .15s;
+  }
+  .nf-link:hover { text-decoration-color: #009e78; }
+  .nf-terms {
+    text-align: center; margin-top: 14px;
+    font-size: 11.5px; color: #afc0b8; line-height: 1.6;
+  }
+  .nf-terms-link {
+    background: none; border: none; padding: 0;
+    font-family: 'DM Sans', sans-serif; font-size: 11.5px;
+    color: #96b0a4; cursor: pointer; text-decoration: underline;
+  }
+
+  /* ─ Name row ─ */
+  .nf-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ─ Forgot password ─ */
+  .nf-pw-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 5px;
+  }
+
+  /* ─ Spinner ─ */
+  .nf-spinner {
+    width: 17px; height: 17px;
+    border: 2.5px solid rgba(255,255,255,.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: nf-spin .7s linear infinite;
+  }
+`;
+
+/* ─── Icons ────────────────────────────────────────────────────── */
+function EyeIcon({ visible }) {
+  return visible
+    ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
 }
 
-/* ─── API portal illustration ────────────────────────────────────────────── */
-function ApiIllustration() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-      <svg viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg"
-        style={{ position: 'absolute', right: 0, top: 0, width: '65%', height: '100%' }}>
-        <g style={{ animation: 'float 3s ease-in-out infinite' }}>
-          <rect x="340" y="80" width="350" height="295" rx="14" fill="#0f172a" opacity="0.96" />
-          <rect x="340" y="80" width="350" height="32" rx="14" fill="#1e293b" />
-          <rect x="340" y="96" width="350" height="16" fill="#1e293b" />
-          {['#ef4444', '#f59e0b', '#22c55e'].map((c, i) => (
-            <circle key={i} cx={360 + i * 22} cy={96} r={7} fill={c} />
-          ))}
-          {[
-            ['#64748b', '{'],
-            ['#818cf8', '  "booking": {'],
-            ['#34d399', '    "from": "Tirana, AL",'],
-            ['#fbbf24', '    "to": "Rome, IT",'],
-            ['#f472b6', '    "cargo": "500kg",'],
-            ['#34d399', '    "status": "pending",'],
-            ['#818cf8', '    "cost": "$100.00"'],
-            ['#818cf8', '  }'],
-            ['#64748b', '}'],
-          ].map(([color, text], i) => (
-            <text key={i} x="358" y={134 + i * 24} fontSize="13" fill={color} fontFamily="monospace">
-              {text}
-            </text>
-          ))}
-        </g>
-        <g style={{ animation: 'float 2.5s 0.6s ease-in-out infinite' }}>
-          <rect x="720" y="230" width="265" height="265" rx="14" fill="rgba(255,255,255,0.95)" />
-          <text x="852" y="268" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            API PORTAL
-          </text>
-          {[
-            { l: 'Total Users', v: '128', c: '#6366f1' },
-            { l: 'Active Loads', v: '340', c: '#3b82f6' },
-            { l: 'Revenue', v: '$42K', c: '#22c55e' },
-          ].map((s, i) => (
-            <g key={i}>
-              <rect x="736" y={286 + i * 52} width="232" height="40" rx="8" fill={s.c} opacity="0.1" />
-              <text x="750" y={312 + i * 52} fontSize="12" fill={s.c} fontFamily="sans-serif" fontWeight="700">
-                {s.l}
-              </text>
-              <text x="956" y={312 + i * 52} textAnchor="end" fontSize="14" fill={s.c} fontFamily="sans-serif" fontWeight="800">
-                {s.v}
-              </text>
-            </g>
-          ))}
-          {[38, 58, 28, 72, 44, 86, 52].map((h, i) => (
-            <rect key={i} x={738 + i * 30} y={484 - h} width="22" height={h} rx="4" fill="#6366f1" opacity="0.75" />
-          ))}
-        </g>
-        <g style={{ animation: 'float 2.2s 0.2s ease-in-out infinite' }}>
-          <rect x="340" y="414" width="168" height="34" rx="17" fill="#00c896" />
-          <text x="424" y="436" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            manage_users
-          </text>
-        </g>
-        <g style={{ animation: 'float 2.8s 0.9s ease-in-out infinite' }}>
-          <rect x="720" y="524" width="128" height="34" rx="17" fill="#f59e0b" />
-          <text x="784" y="546" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            view_metrics
-          </text>
-        </g>
-        <g style={{ animation: 'float 3s 1.4s ease-in-out infinite' }}>
-          <rect x="960" y="110" width="148" height="34" rx="17" fill="#a78bfa" />
-          <text x="1034" y="132" textAnchor="middle" fontSize="13" fontWeight="800" fill="#0f172a" fontFamily="sans-serif">
-            get_carriers
-          </text>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-/* ─── Icons ─────────────────────────────────────────────────────────────── */
-function EyeIcon() {
-  // Decorative icon – mark as hidden for accessibility if used alone
-  return (
-    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-function EyeOffIcon() {
-  // Decorative icon – mark as hidden for accessibility
-  return (
-    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24
-       A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19
-       m-6.72-1.07a3 3 0 11-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
 function GoogleIcon() {
-  // Google logo – mark as hidden for accessibility
   return (
-    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 
-        30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 
-        17.74 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c
-        -.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76
-        -4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 
-        7.54 2.56 10.78l7.97-6.19z" />
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 
-        15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 
-        2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 
-        6.19C6.51 42.62 14.62 48 24 48z" />
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
   );
 }
 
-/* ─── Role label helper (unused) ───────────────────────────────────── */
-function getRoleLabel(role) {
-  if (role === 'admin')   return 'Admin';
-  if (role === 'carrier') return 'Carrier';
-  if (role === 'shipper') return 'Shipper';
-  return 'User';
+/* ─── Plane SVG ─────────────────────────────────────────────────── */
+function NexPlane() {
+  return (
+    <svg viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%' }}>
+      {/* shadow */}
+      <ellipse cx="178" cy="220" rx="122" ry="9" fill="rgba(0,0,0,0.25)" opacity=".6"/>
+      {/* fuselage */}
+      <path d="M 30 114 Q 85 84 178 98 Q 272 110 318 102 Q 328 108 318 118 Q 272 128 178 126 Q 85 140 30 114Z" fill="#e8ede9"/>
+      <path d="M 62 106 Q 148 90 278 100 Q 308 104 318 101 Q 308 96 278 93 Q 148 83 62 99Z" fill="rgba(255,255,255,.5)"/>
+      {/* nose */}
+      <path d="M 30 114 Q 8 111 3 115 Q 8 119 30 114Z" fill="#dce2dd"/>
+      {/* windows */}
+      {[82,106,130,154,178,202,226,250,274].map((x,i)=>(
+        <rect key={i} x={x} y={103} width={13} height={9} rx={3} fill="#c8e8ff" opacity=".82"/>
+      ))}
+      {/* nose window */}
+      <ellipse cx="29" cy="112" rx="9" ry="5" fill="#b8deff" opacity=".8"/>
+      {/* upper wing */}
+      <path d="M 140 107 Q 174 52 246 33 Q 278 24 288 38 Q 278 58 246 64 Q 204 76 180 112Z" fill="#e0e6e1"/>
+      <path d="M 140 107 Q 172 57 236 40 Q 260 32 274 41 Q 260 55 236 59 Q 198 71 180 110Z" fill="#eff2ef"/>
+      {/* lower wing */}
+      <path d="M 150 120 Q 182 175 246 196 Q 278 204 288 190 Q 278 170 246 163 Q 204 154 182 117Z" fill="#e0e6e1"/>
+      <path d="M 150 120 Q 180 170 236 187 Q 258 195 272 187 Q 260 170 236 162 Q 200 152 182 117Z" fill="#eff2ef"/>
+      {/* winglet upper */}
+      <path d="M 286 38 Q 298 32 300 41 Q 293 53 288 51 Q 286 46 286 38Z" fill="#d5dbd6"/>
+      {/* winglet lower */}
+      <path d="M 286 190 Q 298 196 300 187 Q 293 175 288 177 Q 286 183 286 190Z" fill="#d5dbd6"/>
+      {/* tail */}
+      <path d="M 304 102 Q 318 60 328 55 Q 333 66 328 88 Q 323 101 318 108Z" fill="#dce2dd"/>
+      <path d="M 304 122 Q 320 160 328 167 Q 333 157 328 134 Q 323 122 318 115Z" fill="#dce2dd"/>
+      <path d="M 302 108 Q 328 102 338 100 Q 338 108 328 111 Q 318 113 302 111Z" fill="#e8ede9"/>
+      <path d="M 302 116 Q 328 122 338 124 Q 338 117 328 114 Q 318 112 302 112Z" fill="#e8ede9"/>
+      {/* landing gear */}
+      <rect x="205" y="131" width="52" height="19" rx="10" fill="#ccd2cd"/>
+      <ellipse cx="205" cy="140" rx="9" ry="9" fill="#bbc2bc"/><ellipse cx="205" cy="140" rx="4.5" ry="4.5" fill="#a4ada5"/>
+      <rect x="160" y="131" width="42" height="17" rx="8" fill="#ccd2cd"/>
+      <ellipse cx="160" cy="139" rx="8" ry="8" fill="#bbc2bc"/><ellipse cx="160" cy="139" rx="4" ry="4" fill="#a4ada5"/>
+      {/* NX livery line */}
+      <path d="M 50 108 Q 178 94 308 100" stroke="#00c896" strokeWidth="3.5" fill="none" opacity=".7" strokeLinecap="round"/>
+      <text x="296" y="79" fontSize="7" fontWeight="900" fill="#00c896" fontFamily="sans-serif" transform="rotate(-62,296,79)">NX</text>
+    </svg>
+  );
 }
 
-/* ─── Main component ─────────────────────────────────────────────────────── */
-export default function LoginPage() {
-  const [tab, setTab]           = useState('app');   // 'app' | 'api'
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [showPass, setShowPass] = useState(false);
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const { login }               = useAuth();        // assume login(user, token)
-  const navigate                = useNavigate();   // React Router v6+
+/* ─── Left panel ────────────────────────────────────────────────── */
+function LeftPanel({ mode }) {
+  return (
+    <div className="nf-panel-left">
+      {/* subtle grid */}
+      <svg className="nf-grid-svg" viewBox="0 0 500 900" preserveAspectRatio="none">
+        {Array.from({length:16},(_,i)=><line key={`h${i}`} x1="0" y1={i*60} x2="500" y2={i*60} stroke="#fff" strokeWidth="1"/>)}
+        {Array.from({length:9},(_,i)=><line key={`v${i}`} x1={i*65} y1="0" x2={i*65} y2="900" stroke="#fff" strokeWidth="1"/>)}
+      </svg>
 
-  const isApp = tab === 'app';
+      {/* orbs */}
+      <div className="nf-orb" style={{ width:320, height:320, background:'rgba(0,200,150,.12)', top:'-80px', right:'-60px', animation:'nf-drift1 14s ease-in-out infinite' }}/>
+      <div className="nf-orb" style={{ width:240, height:240, background:'rgba(0,80,40,.35)', bottom:'80px', left:'-60px', animation:'nf-drift2 18s ease-in-out infinite' }}/>
+      <div className="nf-orb" style={{ width:160, height:160, background:'rgba(0,200,150,.08)', top:'40%', left:'30%', animation:'nf-drift1 22s 3s ease-in-out infinite' }}/>
 
-  /* colour tokens that flip per tab */
-  const pageBg      = isApp ? '#00c896' : '#6366f1';
-  const cardBg      = isApp ? '#a8f0d8' : '#c7d2fe';
-  const headClr     = '#0f172a';
-  const mutedClr    = isApp ? 'rgba(0,0,0,0.42)' : 'rgba(15,23,42,0.5)';
-  const borderFocus = isApp ? '#00a57a' : '#4f46e5';
+      {/* route trails */}
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} viewBox="0 0 500 900" preserveAspectRatio="none">
+        <path d="M 50 820 Q 160 550 280 320 Q 380 140 455 65" fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="2" strokeDasharray="10 14" style={{ animation:'nf-trail 11s linear infinite', strokeDashoffset:900 }}/>
+        <path d="M 450 820 Q 340 620 240 450 Q 150 300 65 160" fill="none" stroke="rgba(0,200,150,.22)" strokeWidth="2" strokeDasharray="8 16" style={{ animation:'nf-trail 15s 3s linear infinite', strokeDashoffset:900 }}/>
+      </svg>
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      // Call API to log in
-      const data = await api.login(email, password);  // assumed to return { user, token }
-      login(data.user, data.token);
-      const role = data.user?.role;
+      {/* plane */}
+      <div className="nf-plane-wrap"><NexPlane /></div>
 
-      if (isApp) {
-        // App tab: plain users → homepage; others → dashboard
-        if (!role || role === 'user') {
-          navigate('/');         // go to home page
-        } else {
-          navigate('/dashboard');
-        }
-      } else {
-        // API Portal tab: all roles → dashboard
+      {/* location pins */}
+      <div className="nf-badge-pin" style={{ bottom:'30%', left:'10%', animation:'nf-pulse 3s ease-in-out infinite' }}>
+        <div className="nf-badge-pin-label" style={{ background:'#00c896', color:'#042010' }}>TIA</div>
+        <div className="nf-badge-pin-stem" style={{ background:'#00c896' }}/>
+        <div className="nf-badge-pin-dot" style={{ background:'#00c896' }}/>
+      </div>
+      <div className="nf-badge-pin" style={{ top:'15%', right:'8%', animation:'nf-pulse 3s 1.4s ease-in-out infinite' }}>
+        <div className="nf-badge-pin-label" style={{ background:'#fbbf24', color:'#422006' }}>MXP</div>
+        <div className="nf-badge-pin-stem" style={{ background:'#fbbf24' }}/>
+        <div className="nf-badge-pin-dot" style={{ background:'#fbbf24' }}/>
+      </div>
+      <div className="nf-badge-pin" style={{ top:'44%', left:'6%', animation:'nf-pulse 3s 2.8s ease-in-out infinite' }}>
+        <div className="nf-badge-pin-label" style={{ background:'#a78bfa', color:'#1e0a4a' }}>LHR</div>
+        <div className="nf-badge-pin-stem" style={{ background:'#a78bfa' }}/>
+        <div className="nf-badge-pin-dot" style={{ background:'#a78bfa' }}/>
+      </div>
+
+      {/* logo */}
+      <div className="nf-panel-left-logo" onClick={()=>window.location.href='/'} style={{cursor:'pointer'}}>
+        <div className="nf-logo-mark">N</div>
+        <span className="nf-logo-name">nexflow</span>
+      </div>
+
+      {/* footer text */}
+      <div className="nf-panel-left-footer">
+        <div className="nf-left-headline">
+          {mode === 'login'
+            ? <>Welcome<br/><em>back.</em></>
+            : <>Start your<br/><em>journey.</em></>}
+        </div>
+        <div className="nf-left-sub">
+          {mode === 'login'
+            ? 'Your freight network is\nwaiting for you.'
+            : 'Join thousands of shippers &\ncarriers on NexFlow.'}
+        </div>
+        <div className="nf-dots">
+          <div className="nf-dot" style={{ width: 28, background:'#00c896' }}/>
+          <div className="nf-dot" style={{ width: 8, background:'rgba(255,255,255,.22)' }}/>
+          <div className="nf-dot" style={{ width: 8, background:'rgba(255,255,255,.22)' }}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Password strength ─────────────────────────────────────────── */
+function PasswordStrength({ password }) {
+  if (!password) return null;
+  const score = password.length < 6 ? 1 : password.length < 10 ? 2 : /[A-Z]/.test(password) && /[0-9!@#$%]/.test(password) ? 4 : 3;
+  const colors = ['','#ef4444','#f59e0b','#22c55e','#00c896'];
+  const labels = ['','Weak','Fair','Good','Strong'];
+  return (
+    <div className="nf-strength">
+      <div className="nf-strength-bars">
+        {[1,2,3,4].map(i=>(
+          <div key={i} className="nf-strength-bar" style={{ background: i<=score ? colors[score] : '#e0ede6' }}/>
+        ))}
+      </div>
+      <span className="nf-strength-label" style={{ color: colors[score] }}>{labels[score]}</span>
+    </div>
+  );
+}
+
+/* ─── Main component ─────────────────────────────────────────────── */
+function LoginPageInner() {
+  const location = useLocation();
+  const [mode, setMode]         = useState(location.search.includes('register') ? 'register' : 'login');
+  const [role, setRole]         = useState('shipper');
+
+  // Login state
+  const [emailL, setEmailL]     = useState('');
+  const [passL,  setPassL]      = useState('');
+  const [showL,  setShowL]      = useState(false);
+  const [errorL, setErrorL]     = useState('');
+  const [loadL,  setLoadL]      = useState(false);
+
+  // Register state
+  const [firstName, setFirstName] = useState('');
+  const [lastName,  setLastName]  = useState('');
+  const [emailR,    setEmailR]    = useState('');
+  const [passR,     setPassR]     = useState('');
+  const [showR,     setShowR]     = useState(false);
+  const [errorR,    setErrorR]    = useState('');
+  const [successR,  setSuccessR]  = useState('');
+  const [loadR,     setLoadR]     = useState(false);
+
+  const { login }  = useAuth();
+  const navigate   = useNavigate();
+
+  // ── Google OAuth handler ──────────────────────────────────────────────────
+  // useGoogleLogin uses the Authorization Code flow (popup).
+  // On success it gives us a { credential } object (ID token) we forward to
+  // our backend which verifies it and returns our own JWT.
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError,   setGoogleError]   = useState('');
+
+  const googleLogin = useGoogleLogin({
+    flow: 'implicit',          // returns access_token; we exchange via onSuccess
+    onNonOAuthError: (err) => {
+      console.error('[NexFlow] Non-OAuth error (popup blocked / origin mismatch?):', err);
+      const msg = err.type === 'popup_closed'
+        ? 'Popup was closed before completing sign-in.'
+        : err.type === 'popup_failed_to_open'
+        ? 'Popup was blocked. Please allow popups for this site.'
+        : `Google error: ${err.type || JSON.stringify(err)}`;
+      setGoogleError(msg);
+      setGoogleLoading(false);
+    },
+    onSuccess: async (tokenResponse) => {
+      console.log('[NexFlow] Google onSuccess called, token received');
+      // Exchange the access token for user info, then call our backend
+      try {
+        // Fetch user info from Google using the access token
+        const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        if (!infoRes.ok) throw new Error('Failed to fetch Google user info');
+        const userInfo = await infoRes.json();
+
+        // Send the sub (Google ID) + user info directly to our backend.
+        // We pass the access token as credential; backend will use google-auth-library
+        // to verify via userinfo endpoint instead.
+        // Simpler: use the id_token flow below if you prefer.
+        const data = await api.googleAuth(tokenResponse.access_token, role);
+        login(data.user, data.token);
         navigate('/dashboard');
+      } catch (err) {
+        setGoogleError(err.message || 'Google sign-in failed. Please try again.');
+      } finally {
+        setGoogleLoading(false);
       }
+    },
+    onError: (err) => {
+      console.error('Google OAuth error:', err);
+      setGoogleError('Google sign-in was cancelled or failed.');
+      setGoogleLoading(false);
+    },
+  });
+
+  function handleGoogleAuth() {
+    console.log('[NexFlow] Google button clicked');
+    console.log('[NexFlow] GOOGLE_CLIENT_ID present:', !!GOOGLE_CLIENT_ID);
+    console.log('[NexFlow] Client ID value:', GOOGLE_CLIENT_ID || '(empty — not configured)');
+    if (!GOOGLE_CLIENT_ID) {
+      setGoogleError('Google Sign-In is not configured. Set REACT_APP_GOOGLE_CLIENT_ID and rebuild.');
+      console.error('[NexFlow] Aborting — no client ID');
+      return;
+    }
+    setGoogleError('');
+    setGoogleLoading(true);
+    console.log('[NexFlow] Calling googleLogin()...');
+    try {
+      googleLogin();
     } catch (err) {
-      // err.message might be undefined if err isn't an Error; fallback to string
-      setError(err.message || String(err));
-    } finally {
-      setLoading(false);
+      console.error('[NexFlow] googleLogin() threw synchronously:', err);
+      setGoogleError('Google Sign-In failed to open: ' + err.message);
+      setGoogleLoading(false);
     }
   }
 
-  function switchTab(t) {
-    setTab(t);
-    setError('');
+  // Reset errors on tab switch
+  function switchMode(m) { setMode(m); setErrorL(''); setErrorR(''); setSuccessR(''); }
+
+  async function handleLogin(e) {
+    e.preventDefault(); setErrorL(''); setLoadL(true);
+    try {
+      const data = await api.login(emailL, passL);
+      login(data.user, data.token);
+      navigate('/dashboard');
+    } catch (err) { setErrorL(err.message); }
+    finally { setLoadL(false); }
   }
 
-  /* shared input style */
-  const fieldStyle = {
-    width: '100%',
-    padding: '13px 16px',
-    background: 'white',
-    border: '1.5px solid rgba(0,0,0,0.12)',
-    borderRadius: 8,
-    fontSize: 14,
-    color: '#0f172a',
-    fontFamily: 'var(--font-body)',
-    outline: 'none',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-  };
+  async function handleRegister(e) {
+    e.preventDefault(); setErrorR(''); setSuccessR(''); setLoadR(true);
+    if (passR.length < 6) { setErrorR('Password must be at least 6 characters.'); setLoadR(false); return; }
+    try {
+      const fullName = `${firstName} ${lastName}`.trim();
+      await api.register(emailR, passR, role);
+      setSuccessR('Account created! Signing you in…');
+      setTimeout(async () => {
+        try {
+          const data = await api.login(emailR, passR);
+          login(data.user, data.token);
+          navigate('/dashboard');
+        } catch { switchMode('login'); }
+      }, 900);
+    } catch (err) { setErrorR(err.message); }
+    finally { setLoadR(false); }
+  }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: pageBg,
-      transition: 'background 0.4s ease',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-    }}>
-      {/* dot-grid overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: 'radial-gradient(rgba(0,0,0,0.09) 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
-      }} />
+    <>
+      <style>{STYLES}</style>
+      <div className="nf-page">
+        <LeftPanel mode={mode} />
 
-      {/* illustration */}
-      {isApp ? <WarehouseIllustration /> : <ApiIllustration />}
+        <div className="nf-panel-right">
+          <div className="nf-panel-right-bg"/>
+          <div className="nf-form-wrap" key={mode}>
 
-      {/* back button */}
-      <button
-        onClick={() => navigate('/')}
-        style={{
-          position: 'absolute', top: 20, left: 24, zIndex: 10,
-          background: 'rgba(0,0,0,0.14)', border: 'none', borderRadius: 8,
-          padding: '7px 14px', fontSize: 13, fontWeight: 700,
-          color: '#0f172a', cursor: 'pointer',
-        }}
-      >
-        ← Back
-      </button>
+            {/* Tabs */}
+            <div className="nf-tabs">
+              <button className={`nf-tab${mode==='login'?' active':''}`} onClick={()=>switchMode('login')}>Sign In</button>
+              <button className={`nf-tab${mode==='register'?' active':''}`} onClick={()=>switchMode('register')}>Create Account</button>
+            </div>
 
-      {/* ── toggle pill ── */}
-      <div style={{
-        marginTop: 28, zIndex: 10,
-        background: 'rgba(0,0,0,0.16)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: 999, padding: 4,
-        display: 'flex', gap: 3,
-      }}>
-        {[['app','App'], ['api','API Portal']].map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => switchTab(t)}
-            style={{
-              padding: '7px 30px', borderRadius: 999, border: 'none',
-              fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              transition: 'all 0.22s',
-              background: tab === t ? (t === 'app' ? '#00c896' : 'white') : 'transparent',
-              color:      tab === t ? (t === 'app' ? '#0f172a' : '#6366f1') : 'rgba(15,23,42,0.65)',
-              boxShadow:  tab === t ? '0 2px 10px rgba(0,0,0,0.18)' : 'none',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+            {/* ── LOGIN ── */}
+            {mode === 'login' && (
+              <>
+                <h1 className="nf-heading">Welcome <em>back</em></h1>
+                <p className="nf-subhead">Sign in to access your freight dashboard.</p>
 
-      {/* ── card ── */}
-      <div style={{
-        marginTop: 22, zIndex: 10,
-        width: 390,
-        background: cardBg,
-        borderRadius: 18,
-        padding: '36px 34px 30px',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
-        border: '1px solid rgba(255,255,255,0.55)',
-        animation: 'fadeUp 0.3s ease',  // requires @keyframes fadeUp
-      }}>
-        {/* logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 6,
-            background: '#0f172a', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', color: '#00c896',
-            fontWeight: 900, fontSize: 14,
-            fontFamily: 'var(--font-display)',
-          }}>N</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 15, color: headClr }}>
-            nexflow
-          </span>
+                {errorL && <div className="nf-alert error"><span>⚠</span><span>{errorL}</span></div>}
+
+                <form onSubmit={handleLogin}>
+                  <div className="nf-field">
+                    <label className="nf-label">Email address</label>
+                    <input className="nf-input" type="email" placeholder="you@company.com"
+                      value={emailL} onChange={e=>setEmailL(e.target.value)} required autoComplete="email"/>
+                  </div>
+                  <div className="nf-field">
+                    <div className="nf-pw-row">
+                      <label className="nf-label" style={{marginBottom:0}}>Password</label>
+                      <button type="button" className="nf-link" style={{fontSize:12}}>Forgot password?</button>
+                    </div>
+                    <div className="nf-input-wrap">
+                      <input className="nf-input has-icon" type={showL?'text':'password'}
+                        placeholder="Enter your password"
+                        value={passL} onChange={e=>setPassL(e.target.value)} required autoComplete="current-password"/>
+                      <button type="button" className="nf-input-icon-btn" onClick={()=>setShowL(s=>!s)}>
+                        <EyeIcon visible={showL}/>
+                      </button>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="nf-btn" disabled={loadL} style={{marginTop:6}}>
+                    {loadL ? <><div className="nf-spinner"/>Signing in…</> : <>Sign In →</>}
+                  </button>
+                </form>
+
+                <div className="nf-divider">or continue with</div>
+                <button className="nf-google-btn" type="button" onClick={handleGoogleAuth} disabled={googleLoading}>{googleLoading ? <><div className="nf-spinner" style={{borderTopColor:'#4a6657',borderColor:'rgba(0,0,0,.15)'}}/>Connecting…</> : <><GoogleIcon/>Continue with Google</>}</button>
+
+                <p className="nf-footer-text">
+                  Don't have an account?{' '}
+                  <button className="nf-link" type="button" onClick={()=>switchMode('register')}>Create one free</button>
+                </p>
+                <p className="nf-terms">
+                  By continuing, you agree to NexFlow's{' '}
+                  <button className="nf-terms-link" type="button">Terms</button>{' '}and{' '}
+                  <button className="nf-terms-link" type="button">Privacy Policy</button>.
+                </p>
+              </>
+            )}
+
+            {/* ── REGISTER ── */}
+            {mode === 'register' && (
+              <>
+                <h1 className="nf-heading">Create your <em>account</em></h1>
+                <p className="nf-subhead">Join thousands of shippers and carriers. Free to start.</p>
+
+                {/* Role picker */}
+                <div className="nf-roles">
+                  {[['shipper','📦','Shipper','I send freight'],['carrier','🚛','Carrier','I move freight']].map(([r,icon,name,desc])=>(
+                    <div key={r} className={`nf-role-card${role===r?' active':''}`} onClick={()=>setRole(r)}>
+                      <div className="nf-role-icon">{icon}</div>
+                      <div className="nf-role-name">{name}</div>
+                      <div className="nf-role-desc">{desc}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {errorR   && <div className="nf-alert error"><span>⚠</span><span>{errorR}</span></div>}
+                {successR && <div className="nf-alert success"><span>✓</span><span>{successR}</span></div>}
+
+                <form onSubmit={handleRegister}>
+                  <div className="nf-field">
+                    <label className="nf-label">Full Name</label>
+                    <div className="nf-row2">
+                      <input className="nf-input" type="text" placeholder="First name"
+                        value={firstName} onChange={e=>setFirstName(e.target.value)} required autoComplete="given-name"/>
+                      <input className="nf-input" type="text" placeholder="Last name"
+                        value={lastName} onChange={e=>setLastName(e.target.value)} required autoComplete="family-name"/>
+                    </div>
+                  </div>
+                  <div className="nf-field">
+                    <label className="nf-label">Email address</label>
+                    <input className="nf-input" type="email" placeholder="you@company.com"
+                      value={emailR} onChange={e=>setEmailR(e.target.value)} required autoComplete="email"/>
+                  </div>
+                  <div className="nf-field">
+                    <label className="nf-label">Password</label>
+                    <div className="nf-input-wrap">
+                      <input className="nf-input has-icon" type={showR?'text':'password'}
+                        placeholder="Min. 8 characters"
+                        value={passR} onChange={e=>setPassR(e.target.value)} required autoComplete="new-password"/>
+                      <button type="button" className="nf-input-icon-btn" onClick={()=>setShowR(s=>!s)}>
+                        <EyeIcon visible={showR}/>
+                      </button>
+                    </div>
+                    <PasswordStrength password={passR}/>
+                  </div>
+
+                  <button type="submit" className="nf-btn" disabled={loadR} style={{marginTop:6}}>
+                    {loadR ? <><div className="nf-spinner"/>Creating account…</> : <>Get Started →</>}
+                  </button>
+                </form>
+
+                <div className="nf-divider">or continue with</div>
+                <button className="nf-google-btn" type="button" onClick={handleGoogleAuth} disabled={googleLoading}>{googleLoading ? <><div className="nf-spinner" style={{borderTopColor:'#4a6657',borderColor:'rgba(0,0,0,.15)'}}/>Connecting…</> : <><GoogleIcon/>Continue with Google</>}</button>
+
+                <p className="nf-footer-text">
+                  Already have an account?{' '}
+                  <button className="nf-link" type="button" onClick={()=>switchMode('login')}>Sign in instead</button>
+                </p>
+                <p className="nf-terms">
+                  By continuing, you agree to NexFlow's{' '}
+                  <button className="nf-terms-link" type="button">Terms</button>{' '}and{' '}
+                  <button className="nf-terms-link" type="button">Privacy Policy</button>.
+                </p>
+              </>
+            )}
+
+          </div>
         </div>
-
-        {/* heading */}
-        <h2 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 30, fontWeight: 900,
-          letterSpacing: '-0.03em',
-          lineHeight: 1.15,
-          color: headClr,
-          marginBottom: 8,
-          whiteSpace: 'pre-line',
-        }}>
-          {isApp ? 'Welcome back\nto NexFlow!' : 'API Portal\nSign In'}
-        </h2>
-
-        {/* Subtitle */}
-        <p style={{ fontSize: 13, color: mutedClr, marginBottom: 22, lineHeight: 1.5 }}>
-          {isApp
-            ? 'Log in to track shipments and manage your account.'
-            : 'Sign in as Admin, Shipper, or Carrier to access your dashboard.'}
-        </p>
-
-        {/* Role hint for API tab */}
-        {!isApp && (
-          <div style={{
-            display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap',
-          }}>
-            {[['Admin','#f472b6'], ['Shipper','#60a5fa'], ['Carrier','#34d399']].map(([role, color]) => (
-              <span
-                key={role}
-                style={{
-                  fontSize: 11, fontWeight: 700, padding: '3px 10px',
-                  borderRadius: 20, background: `${color}22`,
-                  color: color, border: `1px solid ${color}44`,
-                }}
-              >
-                {role}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email} onChange={e => setEmail(e.target.value)}
-            required style={fieldStyle}
-            // focus outline
-            onFocus={e => { e.target.style.borderColor = borderFocus; e.target.style.boxShadow = `0 0 0 3px ${borderFocus}22`; }}
-            onBlur={e => { e.target.style.borderColor = 'rgba(0,0,0,0.12)'; e.target.style.boxShadow = 'none'; }}
-          />
-
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showPass ? 'text' : 'password'}
-              placeholder="Password"
-              value={password} onChange={e => setPassword(e.target.value)}
-              required style={{ ...fieldStyle, paddingRight: 44 }}
-              onFocus={e => { e.target.style.borderColor = borderFocus; e.target.style.boxShadow = `0 0 0 3px ${borderFocus}22`; }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(0,0,0,0.12)'; e.target.style.boxShadow = 'none'; }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass(p => !p)}
-              aria-label="Toggle password visibility"           /* Accessibility: label for screen readers */
-              aria-pressed={showPass}                         /* State indicator */
-              style={{
-                position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,0,0,0.38)',
-                display: 'flex', alignItems: 'center', padding: 0,
-              }}
-            >
-              {showPass ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'right', marginTop: -2 }}>
-            {/* Consider making this a link or button if needed */}
-            <span style={{ fontSize: 12.5, color: mutedClr, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-              Forgot password
-            </span>
-          </div>
-
-          {error && (
-            <div style={{
-              background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.3)',
-              color: '#7f1d1d', padding: '9px 13px', borderRadius: 8, fontSize: 13,
-            }}>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%', padding: '14px',
-              background: isApp ? '#0f172a' : '#4f46e5',
-              color: 'white',
-              border: 'none', borderRadius: 8,
-              fontSize: 15, fontWeight: 700, cursor: 'pointer',
-              fontFamily: 'var(--font-display)',
-              marginTop: 4,
-              opacity: loading ? 0.65 : 1,
-              transition: 'opacity 0.15s, transform 0.15s',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
-          >
-            {loading
-              ? (
-                <span style={{
-                  width: 18, height: 18,
-                  border: '3px solid rgba(255,255,255,0.35)',
-                  borderTopColor: 'white',
-                  borderRadius: '50%',
-                  display: 'inline-block',
-                  animation: 'spin 0.7s linear infinite'  /* requires @keyframes spin */
-                }} />
-              )
-              : 'Log in'
-            }
-          </button>
-        </form>
-
-        {/* Google + signup — App tab only */}
-        {isApp && (
-          <>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0 14px', color: mutedClr, fontSize: 13
-            }}>
-              <div style={{ flex: 1, height: 1.5, background: 'rgba(0,0,0,0.14)' }} />
-              <span>or</span>
-              <div style={{ flex: 1, height: 1.5, background: 'rgba(0,0,0,0.14)' }} />
-            </div>
-
-            <button
-              onClick={() => alert('Configure REACT_APP_GOOGLE_CLIENT_ID in your .env to enable Google login.')}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                padding: '13px', background: 'white',
-                border: '1.5px solid rgba(0,0,0,0.12)', borderRadius: 8,
-                fontSize: 14, fontWeight: 600, color: '#0f172a', cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-                transition: 'border-color 0.15s, box-shadow 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.28)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </button>
-
-            <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13.5, color: mutedClr }}>
-              Don&rsquo;t have an account?{' '}
-              <Link to="/register" style={{ color: '#0f172a', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                Sign up
-              </Link>
-            </p>
-          </>
-        )}
-
-        {/* API tab: no self-signup, contact admin notice */}
-        {!isApp && (
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 12.5, color: mutedClr, lineHeight: 1.5 }}>
-            Need API access?{' '}
-            <span style={{ color: '#4f46e5', fontWeight: 700, cursor: 'pointer' }}>
-              Contact your administrator
-            </span>
-          </p>
-        )}
       </div>
+    </>
+  );
+}
 
-      {/* bottom padding */}
-      <div style={{ height: 40 }} />
-    </div>
+// GoogleOAuthProvider must always wrap LoginPageInner because useGoogleLogin
+// is called unconditionally inside it. We pass a placeholder when the real
+// Client ID isn't configured yet — the button will show a "not configured"
+// message instead of crashing.
+export default function LoginPage() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || 'not-configured'}>
+      <LoginPageInner />
+    </GoogleOAuthProvider>
   );
 }

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: location-simulator
+  namespace: nexflow
+  labels:
+    app: location-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: location-simulator
+  template:
+    metadata:
+      labels:
+        app: location-simulator
+    spec:
+      containers:
+        - name: location-simulator
+          image: nexflow/location-simulator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GATEWAY_URL
+              value: "http://api-gateway:8080"
+            - name: SIM_EMAIL
+              value: "sim@nexflow.internal"
+            - name: SIM_PASSWORD
+              value: "sim_password_123"
+            - name: TICK_MS
+              value: "15000"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"

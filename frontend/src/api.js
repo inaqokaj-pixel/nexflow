@@ -24,6 +24,8 @@ export const api = {
     request('POST', '/api/customers/register', { email, password, role }),
   login: (email, password) =>
     request('POST', '/api/customers/login', { email, password }),
+  googleAuth: (credential, role) =>
+    request('POST', '/api/customers/auth/google', { credential, role }),
   profile: () =>
     request('GET', '/api/customers/profile'),
 

@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-resource-pvc
+  namespace: nexflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-resource
+  namespace: nexflow
+  labels:
+    app: mongo-resource
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-resource
+  template:
+    metadata:
+      labels:
+        app: mongo-resource
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mongo-resource-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-resource
+  namespace: nexflow
+spec:
+  selector:
+    app: mongo-resource
+  ports:
+    - port: 27017
+      targetPort: 27017

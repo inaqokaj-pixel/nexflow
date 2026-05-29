@@ -147,6 +147,7 @@ services:
       - "3001:3001"
     environment:
       PORT: 3001
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       DB_HOST: postgres-customer
       DB_PORT: 5432
       DB_NAME: customer_db
@@ -155,6 +156,12 @@ services:
       JWT_SECRET: nexflow_secret_key
       RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
       NODE_ENV: development
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
     depends_on:
       postgres-customer:
         condition: service_healthy
@@ -178,6 +185,12 @@ services:
       DB_PASSWORD: postgres123
       RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
       NODE_ENV: development
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
     depends_on:
       postgres-booking:
         condition: service_healthy
@@ -201,6 +214,12 @@ services:
       DB_PASSWORD: postgres123
       RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
       NODE_ENV: development
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3005/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
     depends_on:
       postgres-notification:
         condition: service_healthy
@@ -274,6 +293,12 @@ services:
       DB_PASSWORD: postgres123
       RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
       NODE_ENV: development
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3006/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
     depends_on:
       postgres-tracking:
         condition: service_healthy
@@ -298,6 +323,13 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:3005
       TRACKING_SERVICE_URL: http://tracking-service:3006
       NODE_ENV: development
+      REACT_APP_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
     depends_on:
       customer-service:
         condition: service_healthy
